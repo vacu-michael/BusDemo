@@ -1,5 +1,10 @@
+using SAL;
+using BLL;
 using Microsoft.EntityFrameworkCore;
 using Frontend.Components;
+
+using MassTransit;
+using Models;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,9 +13,25 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Configure MassTransit with Azure Service Bus
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingAzureServiceBus((context, cfg) =>
+    {
+        var connectionString = builder.Configuration["AzureServiceBus:ConnectionString"];
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException("Azure Service Bus connection string is not configured.");
+        cfg.Host(connectionString);
+    });
+});
+
 // Register DemoDbContext with connection string from user-secrets (Db:ConnectionString)
 builder.Services.AddDbContext<DAL.DemoDbContext>(options =>
     options.UseSqlServer(builder.Configuration["Db:ConnectionString"]));
+
+// Register BusService and DemoBusinessLogic for DI
+builder.Services.AddScoped<BusService>();
+builder.Services.AddScoped<DemoBusinessLogic>();
 
 var app = builder.Build();
 
