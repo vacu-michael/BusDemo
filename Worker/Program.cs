@@ -1,10 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using MassTransit;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Worker
 {
@@ -29,7 +27,7 @@ namespace Worker
 
                         var entryAssembly = Assembly.GetEntryAssembly();
 
-                        x.AddConsumers(entryAssembly);
+                        x.AddConsumer<StartWorkflowCommandConsumer>();
                         x.AddSagaStateMachines(entryAssembly);
                         x.AddSagas(entryAssembly);
                         x.AddActivities(entryAssembly);
@@ -39,6 +37,7 @@ namespace Worker
                             cfg.ConfigureEndpoints(context);
                         });
                     });
+                    services.AddScoped<StartWorkflowCommandConsumer>();
                 });
     }
 }
