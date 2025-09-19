@@ -6,19 +6,49 @@
 
 <h1>Hello, world!</h1>
 
-Welcome to your new app.
-
 <button @onclick="StartWorkflowAsync">Start Workflow</button>
+
+@if (applicationId is not null)
+{
+    <p>Application ID: <b>@applicationId</b></p>
+}
+
+@if (accountNumber is not null)
+{
+    <p>Account Number: <b>@accountNumber</b></p>
+}
 
 
 @code {
-    [Inject]
-    public DemoBusinessLogic BLL { get; set; } = default!;
+    [Inject] public DemoBusinessLogic BLL { get; set; } = default!;
+    [Inject] public ILogger<Home> Logger { get; set; } = default!;
+    private int? applicationId;
+    private long? accountNumber;
+
+    protected override void OnInitialized()
+    {
+        BLL.WorkflowCompleted += OnWorkflowCompleted;
+    }
+
+    private void OnWorkflowCompleted(int appId)
+    {
+        if (applicationId != appId) return;
+
+        var app = BLL.GetApplication(appId);
+        if (app == null) return;
+        Logger.LogInformation("Workflow completed for application {ApplicationId}. New account number {AccountNumber}", appId,
+        app.AccountNumber?.ToString()[^4..]);
+
+        accountNumber = app.AccountNumber;
+        InvokeAsync(StateHasChanged);
+    }
 
     private async Task StartWorkflowAsync()
     {
         var newApp = await BLL.CreateApplicationAsync();
+        applicationId = newApp.Id;
+        accountNumber = null;
         await BLL.SendStartWorkflowCommand(newApp.Id);
-        Console.WriteLine($"Start workflow button clicked for application {newApp.Id}");
+        Logger.LogInformation("Start workflow button clicked for application {ApplicationId}", newApp.Id);
     }
 }

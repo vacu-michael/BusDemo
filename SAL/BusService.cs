@@ -9,6 +9,7 @@ namespace SAL;
 public class BusService(IBus bus)
 {
     private readonly IBus _bus = bus;
+    public event Action<int>? WorkflowCompleted;
 
     /// <summary>
     /// Sends a StartWorkflow command to the bus.
@@ -18,5 +19,10 @@ public class BusService(IBus bus)
     {
         var command = new StartWorkflow(applicationId);
         await _bus.Send(command);
+    }
+
+    public void OnWorkflowCompleted(int applicationId)
+    {
+        WorkflowCompleted?.Invoke(applicationId);
     }
 }

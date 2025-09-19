@@ -16,12 +16,14 @@ builder.Services.AddRazorComponents()
 // Configure MassTransit with Azure Service Bus
 builder.Services.AddMassTransit(x =>
 {
+    x.AddConsumer<Frontend.WorkflowCompletedConsumer>();
     x.UsingAzureServiceBus((context, cfg) =>
     {
         var connectionString = builder.Configuration["AzureServiceBus:ConnectionString"];
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("Azure Service Bus connection string is not configured.");
         cfg.Host(connectionString);
+        cfg.ConfigureEndpoints(context);
     });
 });
 
