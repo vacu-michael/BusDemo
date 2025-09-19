@@ -2,6 +2,7 @@ namespace Models;
 
 public class Settings
 {
-    public bool CoreAvailable { get; set; }
-    public bool ThrowError { get; set; }
+    public int Id { get; set; }
+    public required string Name { get; set; }
+    public required bool Value { get; set; }
 }

@@ -1,10 +1,16 @@
+using Microsoft.EntityFrameworkCore;
 using Frontend.Components;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Register DemoDbContext with connection string from user-secrets (Db:ConnectionString)
+builder.Services.AddDbContext<DAL.DemoDbContext>(options =>
+    options.UseSqlServer(builder.Configuration["Db:ConnectionString"]));
 
 var app = builder.Build();
 
