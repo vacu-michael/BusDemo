@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="BLL/BLL.csproj" />
+  <Project Path="DAL/DAL.csproj" />
+  <Project Path="Frontend/Frontend.csproj" />
+  <Project Path="Models/Models.csproj" />
+  <Project Path="SAL/SAL.csproj" />
+  <Project Path="Worker/Worker.csproj" />
+</Solution>
