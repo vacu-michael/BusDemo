@@ -1,5 +1,6 @@
-using SAL;
 using BLL;
+using DAL;
+using SAL;
 using Microsoft.EntityFrameworkCore;
 using Frontend.Components;
 using Frontend.Consumers;
@@ -28,7 +29,7 @@ builder.Services.AddMassTransit(x =>
 });
 
 // Register DemoDbContext with connection string from user-secrets (Db:ConnectionString)
-builder.Services.AddDbContext<DAL.DemoDbContext>(options =>
+builder.Services.AddDbContext<DemoDbContext>(options =>
     options.UseSqlServer(builder.Configuration["Db:ConnectionString"]));
 
 // Register BusService and DemoBusinessLogic for DI
