@@ -19,6 +19,8 @@ namespace Worker
                 {
                     services.AddMassTransit(x =>
                     {
+                        x.AddServiceBusMessageScheduler();
+
                         x.SetKebabCaseEndpointNameFormatter();
 
                         // By default, sagas are in-memory, but should be changed to a durable
@@ -34,6 +36,8 @@ namespace Worker
 
                         x.UsingInMemory((context, cfg) =>
                         {
+                            cfg.UseServiceBusMessageScheduler();
+
                             cfg.ConfigureEndpoints(context);
                         });
                     });

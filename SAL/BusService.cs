@@ -10,6 +10,8 @@ public class BusService(IBus bus)
 {
     private readonly IBus _bus = bus;
     public event Action<int>? WorkflowCompleted;
+    public event Action<int>? WorkflowRescheduled;
+    public event Action<int>? WorkflowError;
 
     /// <summary>
     /// Sends a StartWorkflow command to the bus.
@@ -24,5 +26,15 @@ public class BusService(IBus bus)
     public void OnWorkflowCompleted(int applicationId)
     {
         WorkflowCompleted?.Invoke(applicationId);
+    }
+
+    public void OnWorkflowRescheduled(int applicationId)
+    {
+        WorkflowRescheduled?.Invoke(applicationId);
+    }
+
+    public void OnWorkflowError(int applicationId)
+    {
+        WorkflowError?.Invoke(applicationId);
     }
 }

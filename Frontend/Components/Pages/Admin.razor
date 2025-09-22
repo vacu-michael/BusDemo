@@ -1,0 +1,20 @@
+@page "/admin"
+@rendermode InteractiveServer
+@using BLL
+@using Models
+
+<PageTitle>Admin</PageTitle>
+<h1>Admin Page</h1>
+<ul>
+    <li>Core Available: @CoreAvailable()</li>
+    <li>Throw Error: @ThrowError()</li>
+</ul>
+
+<button @onclick="() => AdminLogic.ToggleSetting(SettingsConstants.CoreAvailable)">Toggle Core Available</button>
+<button @onclick="() => AdminLogic.ToggleSetting(SettingsConstants.ThrowError)">Toggle Throw Error</button>
+
+@code {
+    [Inject] public required AdminBusinessLogic AdminLogic { get; set; }
+    public async Task<bool> CoreAvailable() => await AdminLogic.GetSetting(SettingsConstants.CoreAvailable);
+    public async Task<bool> ThrowError() => await AdminLogic.GetSetting(SettingsConstants.ThrowError);
+}

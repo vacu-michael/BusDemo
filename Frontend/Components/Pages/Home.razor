@@ -18,29 +18,48 @@
     <p>Account Number: <b>@accountNumber</b></p>
 }
 
+@if (statusMessage is not null)
+{
+    <p>@statusMessage</p>
+}
 
 @code {
-    [Inject] public DemoBusinessLogic BLL { get; set; } = default!;
-    [Inject] public ILogger<Home> Logger { get; set; } = default!;
+    [Inject] public required DemoBusinessLogic BLL { get; set; }
+    [Inject] public required ILogger<Home> Logger { get; set; }
     private int? applicationId;
     private long? accountNumber;
+    private string? statusMessage;
 
     protected override void OnInitialized()
     {
-        BLL.WorkflowCompleted += OnWorkflowCompleted;
+        BLL.WorkflowCompleted += async (ApplicationId) => await OnWorkflowCompleted(ApplicationId);
+        BLL.WorkflowRescheduled += async (ApplicationId) => await OnWorkflowRescheduled(ApplicationId);
+        BLL.WorkflowError += async (ApplicationId) => await OnWorkflowError(ApplicationId);
     }
 
-    private void OnWorkflowCompleted(int appId)
+    private async Task OnWorkflowCompleted(int appId)
     {
         if (applicationId != appId) return;
 
-        var app = BLL.GetApplication(appId);
+        var app = await BLL.GetApplication(appId);
         if (app == null) return;
-        Logger.LogInformation("Workflow completed for application {ApplicationId}. New account number {AccountNumber}", appId,
-        app.AccountNumber?.ToString()[^4..]);
 
         accountNumber = app.AccountNumber;
-        InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnWorkflowRescheduled(int appId)
+    {
+        if (applicationId != appId) return;
+        statusMessage = "Workflow rescheduled. Please wait...";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnWorkflowError(int appId)
+    {
+        if (applicationId != appId) return;
+        statusMessage = "Workflow error occurred. Please try again later.";
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task StartWorkflowAsync()

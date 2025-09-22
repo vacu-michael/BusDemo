@@ -2,7 +2,7 @@ using MassTransit;
 using Models;
 using SAL;
 
-namespace Frontend;
+namespace Frontend.Consumers;
 
 public class WorkflowCompletedConsumer(BusService busService, ILogger<WorkflowCompletedConsumer> logger) : IConsumer<WorkflowCompleted>
 {

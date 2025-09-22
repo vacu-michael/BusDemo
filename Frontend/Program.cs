@@ -2,10 +2,8 @@ using SAL;
 using BLL;
 using Microsoft.EntityFrameworkCore;
 using Frontend.Components;
-
+using Frontend.Consumers;
 using MassTransit;
-using Models;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +14,9 @@ builder.Services.AddRazorComponents()
 // Configure MassTransit with Azure Service Bus
 builder.Services.AddMassTransit(x =>
 {
-    x.AddConsumer<Frontend.WorkflowCompletedConsumer>();
+    x.AddConsumer<WorkflowCompletedConsumer>();
+    x.AddConsumer<WorkflowRescheduledConsumer>();
+    x.AddConsumer<WorkflowErrorConsumer>();
     x.UsingAzureServiceBus((context, cfg) =>
     {
         var connectionString = builder.Configuration["AzureServiceBus:ConnectionString"];
@@ -34,6 +34,7 @@ builder.Services.AddDbContext<DAL.DemoDbContext>(options =>
 // Register BusService and DemoBusinessLogic for DI
 builder.Services.AddScoped<BusService>();
 builder.Services.AddScoped<DemoBusinessLogic>();
+builder.Services.AddScoped<AdminBusinessLogic>();
 
 var app = builder.Build();
 
@@ -46,7 +47,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 

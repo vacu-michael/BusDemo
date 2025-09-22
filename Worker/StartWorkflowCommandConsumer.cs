@@ -7,23 +7,15 @@ using Models;
 using MassTransit;
 using System;
 using System.Threading.Tasks;
+using BLL;
 
 namespace Worker;
 
 /// <summary>
 /// Consumes StartWorkflowCommand, updates Application, and emits WorkflowCompleted event.
 /// </summary>
-public class StartWorkflowCommandConsumer : IConsumer<StartWorkflow>
+public class StartWorkflowCommandConsumer(DemoBusinessLogic _bll, ILogger<StartWorkflowCommandConsumer> _logger) : IConsumer<StartWorkflow>
 {
-    private readonly DemoDbContext _dbContext;
-    private readonly ILogger<StartWorkflowCommandConsumer> _logger;
-
-    public StartWorkflowCommandConsumer(DemoDbContext dbContext, ILogger<StartWorkflowCommandConsumer> logger)
-    {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
-
     /// <summary>
     /// Consumes the StartWorkflow command, updates Application, and emits WorkflowCompleted event.
     /// </summary>
@@ -32,23 +24,52 @@ public class StartWorkflowCommandConsumer : IConsumer<StartWorkflow>
         var command = context.Message;
         var cancellationToken = context.CancellationToken;
 
-        var app = await _dbContext.Applications.FirstOrDefaultAsync(a => a.Id == command.ApplicationId, cancellationToken);
+        // Simulate general error
+        var throwErrorSetting = await _bll.GetSettings(SettingsConstants.ThrowError);
+        if (throwErrorSetting is not null && throwErrorSetting.Value is true)
+        {
+            _logger.LogError("Simulated error as per ThrowError setting. Failing StartWorkflowCommand for ApplicationId {ApplicationId}.", command.ApplicationId);
+            await context.Publish(new WorkflowError(command.ApplicationId), cancellationToken);
+            return;
+        }
+
+        // Simulate checking if the core system is available
+        var coreIsAvailable = await _bll.GetSettings(SettingsConstants.CoreAvailable);
+        if (coreIsAvailable is not null && coreIsAvailable.Value is false)
+        {
+            _logger.LogInformation("Core system is not available. Rescheduling StartWorkflowCommand ApplicationId {ApplicationId}.", command.ApplicationId);
+
+            var rescheduleDate = DateTime.UtcNow.AddMinutes(5);
+
+            await context.ScheduleSend(rescheduleDate, command, cancellationToken);
+            _logger.LogDebug("Rescheduled StartWorkflowCommand for ApplicationId {ApplicationId} at {RescheduleDate}.", command.ApplicationId, rescheduleDate);
+
+            var rescheduledEvent = new WorkflowRescheduled(command.ApplicationId, rescheduleDate);
+            await context.Publish(rescheduledEvent, cancellationToken);
+            _logger.LogDebug("WorkflowRescheduled event emitted for ApplicationId {ApplicationId} at {RescheduleDate}.", command.ApplicationId, rescheduleDate);
+            return;
+        }
+
+
+        // Fetch the application
+        var app = await _bll.GetApplication(command.ApplicationId);
         if (app is null)
         {
             _logger.LogWarning("Application with ID {ApplicationId} not found.", command.ApplicationId);
             return;
         }
 
-        // Set a randomly generated long as the AccountNumber
+        // Set a randomly generated 8-digit long as the AccountNumber
         var random = new Random();
-        var randomValue = ((long)random.Next() << 32) | (uint)random.Next();
-        app.AccountNumber = randomValue;
+        var randomValue = random.NextInt64(10_000_000, 99_000_000); // 8-digit number
+        var accountNumber = randomValue + app.Id; // Do something with app.Id to have a reason to pull it from db
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Random AccountNumber {RandomValue} added to application {ApplicationId}.", randomValue, app.Id);
+        await _bll.SetAccountNumberForApplication(app.Id, accountNumber);
+        var last4 = randomValue.ToString()[^4..];
+        _logger.LogInformation("Random AccountNumber xx{Last4} added to application {ApplicationId}.", last4, app.Id);
 
         var evt = new WorkflowCompleted(app.Id);
         await context.Publish(evt, cancellationToken);
-        _logger.LogInformation("WorkflowCompleted event emitted for application {ApplicationId}.", app.Id);
+        _logger.LogDebug("WorkflowCompleted event emitted for application {ApplicationId}.", app.Id);
     }
 }

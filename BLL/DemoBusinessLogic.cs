@@ -1,65 +1,57 @@
 ﻿
 using DAL;
+using Microsoft.EntityFrameworkCore;
 using Models;
 using SAL;
 
 namespace BLL;
 
-public sealed class DemoBusinessLogic : IDisposable
+public sealed class DemoBusinessLogic
 {
-    private readonly DemoDbContext db;
-    private readonly BusService busService;
+    private readonly DemoDbContext _db;
+    private readonly BusService _busService;
     public event Action<int>? WorkflowCompleted;
+    public event Action<int>? WorkflowRescheduled;
+    public event Action<int>? WorkflowError;
 
     public DemoBusinessLogic(DemoDbContext db, BusService busService)
     {
-        this.db = db;
-        this.busService = busService;
-        busService.WorkflowCompleted += OnWorkflowCompleted;
-    }
-
-    private void OnWorkflowCompleted(int applicationId)
-    {
-        WorkflowCompleted?.Invoke(applicationId);
+        _db = db;
+        _busService = busService;
+        _busService.WorkflowCompleted += (appId) => WorkflowCompleted?.Invoke(appId);
+        _busService.WorkflowRescheduled += (appId) => WorkflowRescheduled?.Invoke(appId);
+        _busService.WorkflowError += (appId) => WorkflowError?.Invoke(appId);
     }
 
     public async Task<Application> CreateApplicationAsync()
     {
         var app = new Application();
-        db.Applications.Add(app);
-        await db.SaveChangesAsync();
+        _db.Applications.Add(app);
+        await _db.SaveChangesAsync();
         return app;
     }
 
-    /// <summary>
-    /// Sends a StartWorkflow command for the given application ID.
-    /// </summary>
     public async Task SendStartWorkflowCommand(int applicationId)
     {
-        await busService.SendStartWorkflowCommand(applicationId);
+        await _busService.SendStartWorkflowCommand(applicationId);
     }
 
-    public Application? GetApplication(int id)
+    public async Task<Application?> GetApplication(int id)
     {
-        return db.Applications.Find(id);
+        return await _db.Applications.FindAsync(id);
     }
 
-    public Application? UpdateApplication(Application app)
+    public async Task SetAccountNumberForApplication(int applicationId, long accountNumber)
     {
-        var existingApp = db.Applications.Find(app.Id);
-        if (existingApp == null) return null;
-        existingApp.AccountNumber = app.AccountNumber;
-        db.SaveChanges();
-        return existingApp;
+        var existingApp = await _db.Applications.FindAsync(applicationId);
+        if (existingApp == null) return;
+        existingApp.AccountNumber = accountNumber;
+        await _db.SaveChangesAsync();
+        return;
     }
 
-    public Settings? GetSettings(string name)
+    public async Task<Settings?> GetSettings(string name)
     {
-        return db.Settings.FirstOrDefault(s => s.Name == name);
-    }
-
-    public void Dispose()
-    {
-        busService.WorkflowCompleted -= OnWorkflowCompleted;
+        return await _db.Settings.FirstOrDefaultAsync(s => s.Name == name);
     }
 }
