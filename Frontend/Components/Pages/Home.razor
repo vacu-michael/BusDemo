@@ -13,6 +13,11 @@
     <p>Application ID: <b>@applicationId</b></p>
 }
 
+@if (isProcessing)
+{
+    <p>Processing...</p>
+}
+
 @if (accountNumber is not null)
 {
     <p>Account Number: <b>@accountNumber</b></p>
@@ -26,6 +31,7 @@
 @code {
     [Inject] public required DemoBusinessLogic BLL { get; set; }
     [Inject] public required ILogger<Home> Logger { get; set; }
+    private bool isProcessing = false;
     private int? applicationId;
     private long? accountNumber;
     private string? statusMessage;
@@ -45,20 +51,28 @@
         if (app == null) return;
 
         accountNumber = app.AccountNumber;
+        isProcessing = false;
+
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnWorkflowRescheduled(int appId)
     {
         if (applicationId != appId) return;
+
         statusMessage = "Workflow rescheduled. Please wait...";
+        isProcessing = false;
+
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnWorkflowError(int appId)
     {
         if (applicationId != appId) return;
+
         statusMessage = "Workflow error occurred. Please try again later.";
+        isProcessing = false;
+
         await InvokeAsync(StateHasChanged);
     }
 
@@ -67,7 +81,10 @@
         var newApp = await BLL.CreateApplicationAsync();
         applicationId = newApp.Id;
         accountNumber = null;
+
         await BLL.SendStartWorkflowCommand(newApp.Id);
         Logger.LogInformation("Start workflow button clicked for application {ApplicationId}", newApp.Id);
+
+        isProcessing = true;
     }
 }
