@@ -8,13 +8,16 @@
 <ul>
     <li>Core Available: @CoreAvailable()</li>
     <li>Throw Error: @ThrowError()</li>
+    <li>Delay: @Delay()</li>
 </ul>
 
 <button @onclick="() => AdminLogic.ToggleSetting(SettingsConstants.CoreAvailable)">Toggle Core Available</button>
 <button @onclick="() => AdminLogic.ToggleSetting(SettingsConstants.ThrowError)">Toggle Throw Error</button>
+<button @onclick="() => AdminLogic.ToggleSetting(SettingsConstants.Delay)">Toggle Delay</button>
 
 @code {
     [Inject] public required AdminBusinessLogic AdminLogic { get; set; }
     public async Task<bool> CoreAvailable() => await AdminLogic.GetSetting(SettingsConstants.CoreAvailable);
     public async Task<bool> ThrowError() => await AdminLogic.GetSetting(SettingsConstants.ThrowError);
+    public async Task<bool> Delay() => await AdminLogic.GetSetting(SettingsConstants.Delay);
 }

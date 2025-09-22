@@ -56,6 +56,13 @@ public class StartWorkflowCommandConsumer(DemoBusinessLogic _bll, ILogger<StartW
             return;
         }
 
+        // Simulate processing delay based on settings
+        var delaySetting = await _bll.GetSettings(SettingsConstants.Delay);
+        if (delaySetting is not null && delaySetting.Value is true)
+        {
+            await Task.Delay(5000, cancellationToken);
+        }
+
         // Set a randomly generated 8-digit long as the AccountNumber
         var random = new Random();
         var randomValue = random.NextInt64(10_000_000, 99_000_000); // 8-digit number

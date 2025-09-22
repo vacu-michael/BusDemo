@@ -4,4 +4,5 @@ public static class SettingsConstants
 {
     public const string CoreAvailable = "CoreAvailable";
     public const string ThrowError = "ThrowError";
+    public const string Delay = "Delay";
 }

@@ -26,6 +26,7 @@ CREATE TABLE [Settings] (
 -- Seed initial Settings
 INSERT INTO [Settings] ([Name], [Value]) VALUES (N'CoreAvailable', 1);
 INSERT INTO [Settings] ([Name], [Value]) VALUES (N'ThrowError', 0);
+INSERT INTO [Settings] ([Name], [Value]) VALUES (N'Delay', 0);
 
 INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
 VALUES (N'20250919173530_InitialMigration', N'9.0.9');
