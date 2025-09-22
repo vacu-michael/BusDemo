@@ -1,6 +1,3 @@
-
-using DAL;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Models;
 // Models.Commands and Models.Events do not exist as sub-namespaces; use direct types from Models
@@ -9,7 +6,7 @@ using System;
 using System.Threading.Tasks;
 using BLL;
 
-namespace Worker;
+namespace Worker.Consumers;
 
 /// <summary>
 /// Consumes StartWorkflowCommand, updates Application, and emits WorkflowCompleted event.
