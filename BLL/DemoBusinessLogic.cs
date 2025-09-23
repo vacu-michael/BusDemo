@@ -38,12 +38,12 @@ public sealed class DemoBusinessLogic
 
     public async Task<Application?> GetApplication(int id)
     {
-        return await _db.Applications.FindAsync(id);
+        return await _db.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
     }
 
     public async Task SetAccountNumberForApplication(int applicationId, long accountNumber)
     {
-        var existingApp = await _db.Applications.FindAsync(applicationId);
+        var existingApp = await _db.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.Id == applicationId);
         if (existingApp == null) return;
         existingApp.AccountNumber = accountNumber;
         await _db.SaveChangesAsync();

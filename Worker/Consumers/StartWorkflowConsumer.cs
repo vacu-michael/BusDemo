@@ -11,7 +11,7 @@ namespace Worker.Consumers;
 /// <summary>
 /// Consumes StartWorkflowCommand, updates Application, and emits WorkflowCompleted event.
 /// </summary>
-public class StartWorkflowCommandConsumer(DemoBusinessLogic _bll, ILogger<StartWorkflowCommandConsumer> _logger) : IConsumer<StartWorkflow>
+public class StartWorkflowConsumer(DemoBusinessLogic _bll, ILogger<StartWorkflowConsumer> _logger) : IConsumer<StartWorkflow>
 {
     /// <summary>
     /// Consumes the StartWorkflow command, updates Application, and emits WorkflowCompleted event.
@@ -36,7 +36,7 @@ public class StartWorkflowCommandConsumer(DemoBusinessLogic _bll, ILogger<StartW
         {
             _logger.LogInformation("Core system is not available. Rescheduling StartWorkflowCommand ApplicationId {ApplicationId}.", command.ApplicationId);
 
-            var rescheduleDate = DateTime.UtcNow.AddMinutes(5);
+            var rescheduleDate = DateTime.UtcNow.AddSeconds(5);
 
             await context.ScheduleSend(rescheduleDate, command, cancellationToken);
             _logger.LogDebug("Rescheduled StartWorkflowCommand for ApplicationId {ApplicationId} at {RescheduleDate}.", command.ApplicationId, rescheduleDate);

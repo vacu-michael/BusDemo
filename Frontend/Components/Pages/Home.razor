@@ -48,6 +48,7 @@
         if (applicationId != appId) return;
 
         var app = await BLL.GetApplication(appId);
+
         if (app == null) return;
 
         accountNumber = app.AccountNumber;

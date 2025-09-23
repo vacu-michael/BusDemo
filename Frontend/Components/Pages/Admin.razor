@@ -6,18 +6,38 @@
 <PageTitle>Admin</PageTitle>
 <h1>Admin Page</h1>
 <ul>
-    <li>Core Available: @CoreAvailable()</li>
-    <li>Throw Error: @ThrowError()</li>
-    <li>Delay: @Delay()</li>
+    <li>Core Available: @coreAvailable</li>
+    <li>Throw Error: @throwError</li>
+    <li>Delay: @delay</li>
 </ul>
 
-<button @onclick="() => AdminLogic.ToggleSetting(SettingsConstants.CoreAvailable)">Toggle Core Available</button>
-<button @onclick="() => AdminLogic.ToggleSetting(SettingsConstants.ThrowError)">Toggle Throw Error</button>
-<button @onclick="() => AdminLogic.ToggleSetting(SettingsConstants.Delay)">Toggle Delay</button>
+<button @onclick="() => ToggleAndReload(SettingsConstants.CoreAvailable)">Toggle Core Available</button>
+<button @onclick="() => ToggleAndReload(SettingsConstants.ThrowError)">Toggle Throw Error</button>
+<button @onclick="() => ToggleAndReload(SettingsConstants.Delay)">Toggle Delay</button>
 
 @code {
     [Inject] public required AdminBusinessLogic AdminLogic { get; set; }
-    public async Task<bool> CoreAvailable() => await AdminLogic.GetSetting(SettingsConstants.CoreAvailable);
-    public async Task<bool> ThrowError() => await AdminLogic.GetSetting(SettingsConstants.ThrowError);
-    public async Task<bool> Delay() => await AdminLogic.GetSetting(SettingsConstants.Delay);
+
+    private bool coreAvailable;
+    private bool throwError;
+    private bool delay;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadSettings();
+    }
+
+    private async Task ReloadSettings()
+    {
+        coreAvailable = await AdminLogic.GetSetting(SettingsConstants.CoreAvailable);
+        throwError = await AdminLogic.GetSetting(SettingsConstants.ThrowError);
+        delay = await AdminLogic.GetSetting(SettingsConstants.Delay);
+        StateHasChanged();
+    }
+
+    private async Task ToggleAndReload(string setting)
+    {
+        await AdminLogic.ToggleSetting(setting);
+        await ReloadSettings();
+    }
 }

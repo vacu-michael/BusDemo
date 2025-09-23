@@ -1,4 +1,5 @@
 using MassTransit;
+using Microsoft.Extensions.Logging;
 using Models;
 
 namespace SAL;
@@ -20,7 +21,8 @@ public class BusService(IBus bus)
     public async Task SendStartWorkflowCommand(int applicationId)
     {
         var command = new StartWorkflow(applicationId);
-        await _bus.Send(command);
+        var endpoint = await _bus.GetSendEndpoint(new Uri("queue:start-workflow"));
+        await endpoint.Send(command);
     }
 
     public void OnWorkflowCompleted(int applicationId)

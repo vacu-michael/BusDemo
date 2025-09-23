@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.3-develop.2368" />
+    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="MassTransit" Version="[8.*,9.0)" />
   </ItemGroup>
@@ -15,5 +15,6 @@
     <ProjectReference Include="..\DAL\DAL.csproj" />
     <ProjectReference Include="..\Models\Models.csproj" />
     <ProjectReference Include="..\BLL\BLL.csproj" />
+    <ProjectReference Include="..\SAL\SAL.csproj" />
   </ItemGroup>
 </Project>

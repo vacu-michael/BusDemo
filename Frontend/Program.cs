@@ -15,15 +15,22 @@ builder.Services.AddRazorComponents()
 // Configure MassTransit with Azure Service Bus
 builder.Services.AddMassTransit(x =>
 {
+    x.SetKebabCaseEndpointNameFormatter();
+
     x.AddConsumer<WorkflowCompletedConsumer>();
     x.AddConsumer<WorkflowRescheduledConsumer>();
     x.AddConsumer<WorkflowErrorConsumer>();
+
     x.UsingAzureServiceBus((context, cfg) =>
     {
+
         var connectionString = builder.Configuration["AzureServiceBus:ConnectionString"];
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("Azure Service Bus connection string is not configured.");
-        cfg.Host(connectionString);
+        cfg.Host(connectionString, h =>
+        {
+            h.TransportType = Azure.Messaging.ServiceBus.ServiceBusTransportType.AmqpWebSockets;
+        });
         cfg.ConfigureEndpoints(context);
     });
 });
@@ -33,7 +40,7 @@ builder.Services.AddDbContext<DemoDbContext>(options =>
     options.UseSqlServer(builder.Configuration["Db:ConnectionString"]));
 
 // Register BusService and DemoBusinessLogic for DI
-builder.Services.AddScoped<BusService>();
+builder.Services.AddSingleton<BusService>();
 builder.Services.AddScoped<DemoBusinessLogic>();
 builder.Services.AddScoped<AdminBusinessLogic>();
 

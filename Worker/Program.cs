@@ -2,6 +2,9 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using MassTransit;
 using Worker.Consumers;
+using System;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 
 namespace Worker;
 
@@ -16,21 +19,29 @@ public class Program
         Host.CreateDefaultBuilder(args)
             .ConfigureServices((hostContext, services) =>
             {
+                services.AddDbContext<DAL.DemoDbContext>(options =>
+                    options.UseSqlServer(hostContext.Configuration["Db:ConnectionString"]));
+                services.AddScoped<BLL.DemoBusinessLogic>();
+                services.AddScoped<SAL.BusService>();
+
                 services.AddMassTransit(x =>
                 {
                     x.AddServiceBusMessageScheduler();
 
                     x.SetKebabCaseEndpointNameFormatter();
 
-                    x.AddConsumer<StartWorkflowCommandConsumer>();
+                    x.AddConsumer<StartWorkflowConsumer>();
 
                     x.UsingAzureServiceBus((context, cfg) =>
                     {
-                        var connectionString = builder.Configuration["AzureServiceBus:ConnectionString"];
+                        var connectionString = hostContext.Configuration["AzureServiceBus:ConnectionString"];
                         if (string.IsNullOrWhiteSpace(connectionString))
                             throw new InvalidOperationException("Azure Service Bus connection string is not configured.");
 
-                        cfg.Host(connectionString);
+                        cfg.Host(connectionString, h =>
+                        {
+                            h.TransportType = Azure.Messaging.ServiceBus.ServiceBusTransportType.AmqpWebSockets;
+                        });
                         cfg.ConfigureEndpoints(context);
                         cfg.UseServiceBusMessageScheduler();
                     });
