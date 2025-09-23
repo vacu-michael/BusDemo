@@ -43,7 +43,7 @@ public sealed class DemoBusinessLogic
 
     public async Task SetAccountNumberForApplication(int applicationId, long accountNumber)
     {
-        var existingApp = await _db.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.Id == applicationId);
+        var existingApp = await _db.Applications.FirstOrDefaultAsync(a => a.Id == applicationId);
         if (existingApp == null) return;
         existingApp.AccountNumber = accountNumber;
         await _db.SaveChangesAsync();

@@ -52,6 +52,7 @@
         if (app == null) return;
 
         accountNumber = app.AccountNumber;
+        statusMessage = "Workflow completed successfully!";
         isProcessing = false;
 
         await InvokeAsync(StateHasChanged);
@@ -86,6 +87,7 @@
         await BLL.SendStartWorkflowCommand(newApp.Id);
         Logger.LogInformation("Start workflow button clicked for application {ApplicationId}", newApp.Id);
 
+        statusMessage = "Workflow started. Please wait...";
         isProcessing = true;
     }
 }
