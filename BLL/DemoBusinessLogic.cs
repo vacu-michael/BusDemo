@@ -40,18 +40,4 @@ public sealed class DemoBusinessLogic
     {
         return await _db.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
     }
-
-    public async Task SetAccountNumberForApplication(int applicationId, long accountNumber)
-    {
-        var existingApp = await _db.Applications.FirstOrDefaultAsync(a => a.Id == applicationId);
-        if (existingApp == null) return;
-        existingApp.AccountNumber = accountNumber;
-        await _db.SaveChangesAsync();
-        return;
-    }
-
-    public async Task<Settings?> GetSettings(string name)
-    {
-        return await _db.Settings.FirstOrDefaultAsync(s => s.Name == name);
-    }
 }

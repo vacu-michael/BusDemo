@@ -11,7 +11,7 @@ namespace Worker.Consumers;
 /// <summary>
 /// Consumes StartWorkflowCommand, updates Application, and emits WorkflowCompleted event.
 /// </summary>
-public class StartWorkflowConsumer(DemoBusinessLogic _bll, ILogger<StartWorkflowConsumer> _logger) : IConsumer<StartWorkflow>
+public class StartWorkflowConsumer(WorkerBusinessLogic _bll, ILogger<StartWorkflowConsumer> _logger) : IConsumer<StartWorkflow>
 {
     /// <summary>
     /// Consumes the StartWorkflow command, updates Application, and emits WorkflowCompleted event.
