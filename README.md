@@ -32,19 +32,21 @@ BusDemo is a demo .NET application demonstrating how to trigger a MassTransit wo
    dotnet restore
    ```
 
-4. **Apply EF Core migrations** (if needed):
-
-   ```pwsh
-   dotnet ef database update --project DAL
-   ```
-
-5. **Run the solution**:
+4. **Run the solution**:
 
    ```pwsh
    dotnet build
    dotnet run --project Frontend
    dotnet run --project Worker
    ```
+
+## Adding Migrations
+
+To add a new EF Core migration, navigate to the `DAL` project directory and run:
+
+```pwsh
+dotnet ef migrations add <MigrationName> --context AppDbContext
+```
 
 ## Code Style Guidelines
 

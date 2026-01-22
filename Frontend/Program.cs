@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Frontend.Components;
 using Frontend.Consumers;
 using MassTransit;
+using Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +44,14 @@ builder.Services.AddDbContext<DemoDbContext>(options =>
 builder.Services.AddSingleton<BusService>();
 builder.Services.AddScoped<DemoBusinessLogic>();
 builder.Services.AddScoped<AdminBusinessLogic>();
+
+// Register EventDbContext and Helper service for logging application events
+builder.Services.AddDbContext<EventDbContext>(options =>
+    options.UseSqlServer(builder.Configuration["Db:ConnectionString"]));
+builder.Services.AddScoped<EventService>();
+
+// Register AppState as scoped service
+builder.Services.AddScoped<AppState>();
 
 var app = builder.Build();
 

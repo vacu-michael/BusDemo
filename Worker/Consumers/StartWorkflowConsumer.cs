@@ -1,17 +1,17 @@
 using Microsoft.Extensions.Logging;
 using Models;
-// Models.Commands and Models.Events do not exist as sub-namespaces; use direct types from Models
 using MassTransit;
 using System;
 using System.Threading.Tasks;
 using BLL;
+using SAL;
 
 namespace Worker.Consumers;
 
 /// <summary>
 /// Consumes StartWorkflowCommand, updates Application, and emits WorkflowCompleted event.
 /// </summary>
-public class StartWorkflowConsumer(WorkerBusinessLogic _bll, ILogger<StartWorkflowConsumer> _logger) : IConsumer<StartWorkflow>
+public class StartWorkflowConsumer(WorkerBusinessLogic _bll, ILogger<StartWorkflowConsumer> _logger, EventService _events) : IConsumer<StartWorkflow>
 {
     /// <summary>
     /// Consumes the StartWorkflow command, updates Application, and emits WorkflowCompleted event.
@@ -27,6 +27,7 @@ public class StartWorkflowConsumer(WorkerBusinessLogic _bll, ILogger<StartWorkfl
         {
             _logger.LogError("Simulated error as per ThrowError setting. Failing StartWorkflowCommand for ApplicationId {ApplicationId}.", command.ApplicationId);
             await context.Publish(new WorkflowError(command.ApplicationId), cancellationToken);
+            _ = _events.LogEventAsync("WorkflowError", command.CorrelationId);
             return;
         }
 
@@ -43,7 +44,10 @@ public class StartWorkflowConsumer(WorkerBusinessLogic _bll, ILogger<StartWorkfl
 
             var rescheduledEvent = new WorkflowRescheduled(command.ApplicationId, rescheduleDate);
             await context.Publish(rescheduledEvent, cancellationToken);
+
             _logger.LogDebug("WorkflowRescheduled event emitted for ApplicationId {ApplicationId} at {RescheduleDate}.", command.ApplicationId, rescheduleDate);
+
+            _ = _events.LogEventAsync("WorkflowRescheduled", command.CorrelationId);
             return;
         }
 
@@ -75,5 +79,6 @@ public class StartWorkflowConsumer(WorkerBusinessLogic _bll, ILogger<StartWorkfl
         var evt = new WorkflowCompleted(app.Id);
         await context.Publish(evt, cancellationToken);
         _logger.LogDebug("WorkflowCompleted event emitted for application {ApplicationId}.", app.Id);
+        _ = _events.LogEventAsync("WorkflowCompleted", command.CorrelationId);
     }
 }

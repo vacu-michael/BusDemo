@@ -18,9 +18,9 @@ public class BusService(IBus bus)
     /// Sends a StartWorkflow command to the bus.
     /// </summary>
     /// <param name="applicationId">The application ID to start workflow for.</param>
-    public async Task SendStartWorkflowCommand(int applicationId)
+    public async Task SendStartWorkflowCommand(int applicationId, Guid correlationId)
     {
-        var command = new StartWorkflow(applicationId);
+        var command = new StartWorkflow(applicationId, correlationId);
         var endpoint = await _bus.GetSendEndpoint(new Uri("queue:start-workflow"));
         await endpoint.Send(command);
     }

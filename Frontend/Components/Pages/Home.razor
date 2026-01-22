@@ -1,10 +1,14 @@
 ﻿@page "/"
 @rendermode InteractiveServer
-@using BLL
+
+@inject EventService events
+@inject AppState appState
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<label>Enter your name</label>
+
+<input @bind="userName" @bind:after="OnUserNameChanged" />
 
 <button @onclick="StartWorkflowAsync">Start Workflow</button>
 
@@ -32,6 +36,7 @@
     [Inject] public required DemoBusinessLogic BLL { get; set; }
     [Inject] public required ILogger<Home> Logger { get; set; }
     private bool isProcessing = false;
+    private string userName = string.Empty;
     private int? applicationId;
     private long? accountNumber;
     private string? statusMessage;
@@ -78,16 +83,29 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task OnUserNameChanged() =>
+        await events.LogEventAsync(
+            eventType: "UserNameFieldChanged",
+            correlationId: appState.CorrelationId,
+            data: new { UserName = userName }
+            );
+
+
     private async Task StartWorkflowAsync()
     {
-        var newApp = await BLL.CreateApplicationAsync();
+
+        var newApp = await BLL.CreateApplicationAsync(userName, appState.CorrelationId);
         applicationId = newApp.Id;
         accountNumber = null;
 
-        await BLL.SendStartWorkflowCommand(newApp.Id);
+        await BLL.SendStartWorkflowCommand(newApp.Id, appState.CorrelationId);
         Logger.LogInformation("Start workflow button clicked for application {ApplicationId}", newApp.Id);
 
         statusMessage = "Workflow started. Please wait...";
         isProcessing = true;
+
+        await events.LogEventAsync(
+            eventType: "ClickedStartWorkflowButton",
+            correlationId: appState.CorrelationId);
     }
 }
