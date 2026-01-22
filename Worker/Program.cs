@@ -21,6 +21,12 @@ public class Program
             {
                 services.AddDbContext<DAL.DemoDbContext>(options =>
                     options.UseSqlServer(hostContext.Configuration["Db:ConnectionString"]));
+
+                services.AddDbContext<DAL.EventDbContext>(options =>
+                    options.UseSqlServer(hostContext.Configuration["Db:ConnectionString"]));
+
+                services.AddScoped<SAL.EventService>();
+
                 services.AddScoped<BLL.WorkerBusinessLogic>();
 
                 services.AddMassTransit(x =>

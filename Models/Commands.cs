@@ -1,3 +1,3 @@
 namespace Models;
 
-public record StartWorkflow(int ApplicationId);
+public record StartWorkflow(int ApplicationId, Guid CorrelationId);

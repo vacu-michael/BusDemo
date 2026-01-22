@@ -23,17 +23,21 @@ public sealed class DemoBusinessLogic
         _busService.WorkflowError += (appId) => WorkflowError?.Invoke(appId);
     }
 
-    public async Task<Application> CreateApplicationAsync()
+    public async Task<Application> CreateApplicationAsync(string name, Guid correlationId)
     {
-        var app = new Application();
+        var app = new Application
+        {
+            Name = name,
+            CorrelationId = correlationId
+        };
         _db.Applications.Add(app);
         await _db.SaveChangesAsync();
         return app;
     }
 
-    public async Task SendStartWorkflowCommand(int applicationId)
+    public async Task SendStartWorkflowCommand(int applicationId, Guid correlationId)
     {
-        await _busService.SendStartWorkflowCommand(applicationId);
+        await _busService.SendStartWorkflowCommand(applicationId, correlationId);
     }
 
     public async Task<Application?> GetApplication(int id)
