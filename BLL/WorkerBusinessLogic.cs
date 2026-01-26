@@ -6,13 +6,13 @@ namespace BLL;
 
 public sealed class WorkerBusinessLogic(DemoDbContext dbContext)
 {
-    public async Task<Application?> GetApplication(int id)
+    public async Task<Application?> GetApplication(Guid correlationId)
     {
-        return await dbContext.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
+        return await dbContext.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.CorrelationId == correlationId);
     }
-    public async Task SetAccountNumberForApplication(int applicationId, long accountNumber)
+    public async Task SetAccountNumberForApplication(Guid correlationId, long accountNumber)
     {
-        var existingApp = await dbContext.Applications.FirstOrDefaultAsync(a => a.Id == applicationId);
+        var existingApp = await dbContext.Applications.FirstOrDefaultAsync(a => a.CorrelationId == correlationId);
         if (existingApp == null) return;
         existingApp.AccountNumber = accountNumber;
         await dbContext.SaveChangesAsync();

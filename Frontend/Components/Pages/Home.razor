@@ -93,13 +93,13 @@
 
     private async Task StartWorkflowAsync()
     {
-
         var newApp = await BLL.CreateApplicationAsync(userName, appState.CorrelationId);
         applicationId = newApp.Id;
         accountNumber = null;
 
-        await BLL.SendStartWorkflowCommand(newApp.Id, appState.CorrelationId);
-        Logger.LogInformation("Start workflow button clicked for application {ApplicationId}", newApp.Id);
+        // Publish ApplicationSubmitted event to start the saga
+        await events.PublishAsync(new ApplicationSubmitted(newApp.Id, appState.CorrelationId));
+        Logger.LogInformation("ApplicationSubmitted event published for application {ApplicationId}", newApp.Id);
 
         statusMessage = "Workflow started. Please wait...";
         isProcessing = true;

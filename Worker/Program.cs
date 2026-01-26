@@ -25,6 +25,9 @@ public class Program
                 services.AddDbContext<DAL.EventDbContext>(options =>
                     options.UseSqlServer(hostContext.Configuration["Db:ConnectionString"]));
 
+                services.AddDbContext<DAL.SagaDbContext>(options =>
+                    options.UseSqlServer(hostContext.Configuration["Db:ConnectionString"]));
+
                 services.AddScoped<SAL.EventService>();
 
                 services.AddScoped<BLL.WorkerBusinessLogic>();
@@ -36,6 +39,14 @@ public class Program
                     x.SetKebabCaseEndpointNameFormatter();
 
                     x.AddConsumer<StartWorkflowConsumer>();
+
+                    // Register saga state machine
+                    x.AddSagaStateMachine<Worker.Saga.ApplicationWorkflowStateMachine, Worker.Saga.ApplicationWorkflowState>()
+                        .EntityFrameworkRepository(r =>
+                        {
+                            r.ConcurrencyMode = MassTransit.EntityFrameworkCoreIntegration.SagaConcurrencyMode.Optimistic;
+                            r.ExistingDbContext<DAL.SagaDbContext>();
+                        });
 
                     x.UsingAzureServiceBus((context, cfg) =>
                     {
