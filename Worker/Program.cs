@@ -1,10 +1,10 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using MassTransit;
-using Worker.Consumers;
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Saga;
 
 namespace Worker;
 
@@ -38,13 +38,13 @@ public class Program
 
                     x.SetKebabCaseEndpointNameFormatter();
 
-                    x.AddConsumer<StartWorkflowConsumer>();
+                    var assembly = typeof(Program).Assembly;
+                    x.AddConsumers(assembly);
 
                     // Register saga state machine
-                    x.AddSagaStateMachine<Worker.Saga.ApplicationWorkflowStateMachine, Worker.Saga.ApplicationWorkflowState>()
+                    x.AddSagaStateMachine<ApplicationWorkflowStateMachine, OpenAccountState>()
                         .EntityFrameworkRepository(r =>
                         {
-                            r.ConcurrencyMode = MassTransit.EntityFrameworkCoreIntegration.SagaConcurrencyMode.Optimistic;
                             r.ExistingDbContext<DAL.SagaDbContext>();
                         });
 

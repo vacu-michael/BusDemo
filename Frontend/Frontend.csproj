@@ -1,19 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>bc8446ee-11bc-4867-a69f-e0b42ec697cd</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MassTransit" Version="8.5.2" />
-    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    <PackageReference Include="MassTransit" Version="8.5.7" />
+    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.7" />
   </ItemGroup>
 
   <ItemGroup>

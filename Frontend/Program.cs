@@ -6,6 +6,7 @@ using Frontend.Components;
 using Frontend.Consumers;
 using MassTransit;
 using Models;
+using Models.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,21 +19,37 @@ builder.Services.AddMassTransit(x =>
 {
     x.SetKebabCaseEndpointNameFormatter();
 
-    x.AddConsumer<WorkflowCompletedConsumer>();
-    x.AddConsumer<WorkflowRescheduledConsumer>();
-    x.AddConsumer<WorkflowErrorConsumer>();
+    x.AddConsumer<ProcessCompletedConsumer>();
+    x.AddConsumer<ProcessRescheduledConsumer>();
+    x.AddConsumer<ProcessErrorConsumer>();
 
     x.UsingAzureServiceBus((context, cfg) =>
     {
-
         var connectionString = builder.Configuration["AzureServiceBus:ConnectionString"];
+
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("Azure Service Bus connection string is not configured.");
+
         cfg.Host(connectionString, h =>
         {
             h.TransportType = Azure.Messaging.ServiceBus.ServiceBusTransportType.AmqpWebSockets;
         });
-        cfg.ConfigureEndpoints(context);
+
+        // Configure subscription endpoints for one-to-many messaging
+        cfg.SubscriptionEndpoint<ProcessCompleted>("process-completed-subscription", e =>
+        {
+            e.ConfigureConsumer<ProcessCompletedConsumer>(context);
+        });
+
+        cfg.SubscriptionEndpoint<CommandDeferred>("process-rescheduled-subscription", e =>
+        {
+            e.ConfigureConsumer<ProcessRescheduledConsumer>(context);
+        });
+
+        cfg.SubscriptionEndpoint<ProcessErrored>("process-error-subscription", e =>
+        {
+            e.ConfigureConsumer<ProcessErrorConsumer>(context);
+        });
     });
 });
 
@@ -49,9 +66,6 @@ builder.Services.AddScoped<AdminBusinessLogic>();
 builder.Services.AddDbContext<EventDbContext>(options =>
     options.UseSqlServer(builder.Configuration["Db:ConnectionString"]));
 builder.Services.AddScoped<EventService>();
-
-// Register AppState as scoped service
-builder.Services.AddScoped<AppState>();
 
 var app = builder.Build();
 

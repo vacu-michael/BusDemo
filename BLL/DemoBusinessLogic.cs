@@ -6,21 +6,21 @@ using SAL;
 
 namespace BLL;
 
-public sealed class DemoBusinessLogic
+public sealed class DemoBusinessLogic : IDisposable
 {
     private readonly DemoDbContext _db;
     private readonly BusService _busService;
-    public event Action<int>? WorkflowCompleted;
-    public event Action<int>? WorkflowRescheduled;
-    public event Action<int>? WorkflowError;
+    public event Action<Guid>? WorkflowCompleted;
+    public event Action<Guid>? WorkflowRescheduled;
+    public event Action<Guid>? WorkflowError;
 
     public DemoBusinessLogic(DemoDbContext db, BusService busService)
     {
         _db = db;
         _busService = busService;
-        _busService.WorkflowCompleted += (appId) => WorkflowCompleted?.Invoke(appId);
-        _busService.WorkflowRescheduled += (appId) => WorkflowRescheduled?.Invoke(appId);
-        _busService.WorkflowError += (appId) => WorkflowError?.Invoke(appId);
+        _busService.WorkflowCompleted += OnWorkflowCompleted;
+        _busService.WorkflowRescheduled += OnWorkflowRescheduled;
+        _busService.WorkflowError += OnWorkflowError;
     }
 
     public async Task<Application> CreateApplicationAsync(string name, Guid correlationId)
@@ -30,18 +30,25 @@ public sealed class DemoBusinessLogic
             Name = name,
             CorrelationId = correlationId
         };
+
         _db.Applications.Add(app);
         await _db.SaveChangesAsync();
+
+        _ = _busService.PublishApplicationSubmittedEvent(correlationId);
         return app;
     }
 
-    public async Task SendStartWorkflowCommand(int applicationId, Guid correlationId)
-    {
-        await _busService.SendStartWorkflowCommand(applicationId, correlationId);
-    }
+    public async Task<Application?> GetApplication(int id) =>
+        await _db.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
 
-    public async Task<Application?> GetApplication(int id)
+    private void OnWorkflowCompleted(Guid correlationId) => WorkflowCompleted?.Invoke(correlationId);
+    private void OnWorkflowRescheduled(Guid correlationId) => WorkflowRescheduled?.Invoke(correlationId);
+    private void OnWorkflowError(Guid correlationId) => WorkflowError?.Invoke(correlationId);
+
+    public void Dispose()
     {
-        return await _db.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
+        _busService.WorkflowCompleted -= OnWorkflowCompleted;
+        _busService.WorkflowRescheduled -= OnWorkflowRescheduled;
+        _busService.WorkflowError -= OnWorkflowError;
     }
 }

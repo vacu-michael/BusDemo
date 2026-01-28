@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <UserSecretsId>bc8446ee-11bc-4867-a69f-e0b42ec697cd</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.2" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-    <PackageReference Include="MassTransit" Version="[8.*,9.0)" />
+    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.7" />
+    <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.5.7" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
+    <PackageReference Include="MassTransit" Version="8.5.7" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,6 +1,5 @@
 using MassTransit;
-using Microsoft.Extensions.Logging;
-using Models;
+using Models.Events;
 
 namespace SAL;
 
@@ -10,33 +9,24 @@ namespace SAL;
 public class BusService(IBus bus)
 {
     private readonly IBus _bus = bus;
-    public event Action<int>? WorkflowCompleted;
-    public event Action<int>? WorkflowRescheduled;
-    public event Action<int>? WorkflowError;
+    public event Action<Guid>? WorkflowCompleted;
+    public event Action<Guid>? WorkflowRescheduled;
+    public event Action<Guid>? WorkflowError;
 
     /// <summary>
     /// Sends a StartWorkflow command to the bus.
     /// </summary>
     /// <param name="applicationId">The application ID to start workflow for.</param>
-    public async Task SendStartWorkflowCommand(int applicationId, Guid correlationId)
+    public Task PublishApplicationSubmittedEvent(Guid correlationId)
     {
-        var command = new StartWorkflow(applicationId, correlationId);
-        var endpoint = await _bus.GetSendEndpoint(new Uri("queue:start-workflow"));
-        await endpoint.Send(command);
+        var command = new ApplicationSubmitted(correlationId);
+        _bus.Publish(command);
+        return Task.CompletedTask;
     }
 
-    public void OnWorkflowCompleted(int applicationId)
-    {
-        WorkflowCompleted?.Invoke(applicationId);
-    }
+    public void OnWorkflowCompleted(Guid correlationId) => WorkflowCompleted?.Invoke(correlationId);
 
-    public void OnWorkflowRescheduled(int applicationId)
-    {
-        WorkflowRescheduled?.Invoke(applicationId);
-    }
+    public void OnWorkflowRescheduled(Guid correlationId) => WorkflowRescheduled?.Invoke(correlationId);
 
-    public void OnWorkflowError(int applicationId)
-    {
-        WorkflowError?.Invoke(applicationId);
-    }
+    public void OnWorkflowError(Guid correlationId) => WorkflowError?.Invoke(correlationId);
 }

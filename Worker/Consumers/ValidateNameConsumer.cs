@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Models;
 using Models.Commands;
 using Models.Events;
 using MassTransit;
@@ -11,41 +10,34 @@ using SAL;
 namespace Worker.Consumers;
 
 /// <summary>
-/// Consumes StartWorkflowCommand, updates Application, and emits WorkflowCompleted event.
+/// Consumes ValidateName Command, updates Application, and emits a ValidateNameSucceeded event.
 /// </summary>
-public class ValidateNameConsumer(WorkerBusinessLogic _bll, ILogger<StartWorkflowConsumer> _logger, EventService _events) : IConsumer<ValidateName>
+public class ValidateNameConsumer(WorkerBusinessLogic bll, ILogger<ValidateNameConsumer> logger, EventService events) : IConsumer<ValidateName>
 {
     /// <summary>
-    /// Consumes the StartWorkflow command, updates Application, and emits WorkflowCompleted event.
+    /// Consumes the ValidateName command, updates Application, and emits ValidateNameSucceeded event.
     /// </summary>
     public async Task Consume(ConsumeContext<ValidateName> context)
     {
         var command = context.Message;
-        var cancellationToken = context.CancellationToken;
+        logger.LogInformation("Validating name for CorrelationId {CorrelationId}.", command.CorrelationId);
 
-        // Simulate checking if the core system is available
-        var coreIsAvailable = await _bll.GetSettings(SettingsConstants.CoreAvailable);
-
-        if (coreIsAvailable is not null && coreIsAvailable.Value is false)
-        {
-            _logger.LogInformation("Core system is not available. Rescheduling StartWorkflowCommand CorrelationId {CorrelationId}.", command.CorrelationId);
-
-            var rescheduleDate = DateTime.UtcNow.AddSeconds(5);
-
-            var rescheduledEvent = new Defer<ValidateName>(command.CorrelationId, rescheduleDate);
-            await context.Publish(rescheduledEvent, cancellationToken);
-
-            _ = _events.LogEventAsync("ValidateNameRescheduled", command.CorrelationId);
-            return;
-        }
-
-        // Fetch the application
-        var app = await _bll.GetApplication(command.CorrelationId)
+        // Retrieve the application
+        var app = await bll.GetApplication(command.CorrelationId)
             ?? throw new Exception("Unable to retrieve application from database");
 
-        if (string.Equals(app.Name, "banned", StringComparison.OrdinalIgnoreCase))
-            throw new Exception("Name on application is banned");
+        // Validate the name
+        if (!bll.NameIsValid(app.Name))
+        {
+            _ = events.LogEventAsync("ValidateNameFailed", command.CorrelationId);
+            logger.LogWarning("Validation failed for name on application with CorrelationId {CorrelationId}.", command.CorrelationId);
 
-        await context.Publish(new ValidateNameSucceeded(command.CorrelationId));
+            // Throw to trigger a Fault<ValidateName> event
+            throw new Exception("Name on application is banned");
+        }
+
+        _ = context.Publish(new ValidateNameSucceeded(command.CorrelationId));
+        _ = events.LogEventAsync("ValidateNameSucceeded", command.CorrelationId);
+        logger.LogInformation("Validation succeeded for name on application with CorrelationId {CorrelationId}.", command.CorrelationId);
     }
 }

@@ -2,7 +2,6 @@
 @rendermode InteractiveServer
 
 @inject EventService events
-@inject AppState appState
 
 <PageTitle>Home</PageTitle>
 
@@ -40,19 +39,20 @@
     private int? applicationId;
     private long? accountNumber;
     private string? statusMessage;
+    private Guid? correlationId = Guid.NewGuid();
 
     protected override void OnInitialized()
     {
-        BLL.WorkflowCompleted += async (ApplicationId) => await OnWorkflowCompleted(ApplicationId);
-        BLL.WorkflowRescheduled += async (ApplicationId) => await OnWorkflowRescheduled(ApplicationId);
-        BLL.WorkflowError += async (ApplicationId) => await OnWorkflowError(ApplicationId);
+        BLL.WorkflowCompleted += async (correlationId) => await OnWorkflowCompleted(correlationId);
+        BLL.WorkflowRescheduled += async (correlationId) => await OnWorkflowRescheduled(correlationId);
+        BLL.WorkflowError += async (correlationId) => await OnWorkflowError(correlationId);
     }
 
-    private async Task OnWorkflowCompleted(int appId)
+    private async Task OnWorkflowCompleted(Guid correlationId)
     {
-        if (applicationId != appId) return;
+        if (correlationId != this.correlationId) return;
 
-        var app = await BLL.GetApplication(appId);
+        var app = await BLL.GetApplication(applicationId ?? 0);
 
         if (app == null) return;
 
@@ -63,9 +63,9 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task OnWorkflowRescheduled(int appId)
+    private async Task OnWorkflowRescheduled(Guid correlationId)
     {
-        if (applicationId != appId) return;
+        if (correlationId != this.correlationId) return;
 
         statusMessage = "Workflow rescheduled. Please wait...";
         isProcessing = false;
@@ -73,9 +73,9 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task OnWorkflowError(int appId)
+    private async Task OnWorkflowError(Guid correlationId)
     {
-        if (applicationId != appId) return;
+        if (correlationId != this.correlationId) return;
 
         statusMessage = "Workflow error occurred. Please try again later.";
         isProcessing = false;
@@ -83,29 +83,27 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task OnUserNameChanged() =>
-        await events.LogEventAsync(
+    private Task OnUserNameChanged() =>
+        events.LogEventAsync(
             eventType: "UserNameFieldChanged",
-            correlationId: appState.CorrelationId,
+            correlationId: this.correlationId ?? Guid.Empty,
             data: new { UserName = userName }
             );
 
 
     private async Task StartWorkflowAsync()
     {
-        var newApp = await BLL.CreateApplicationAsync(userName, appState.CorrelationId);
+        correlationId = Guid.NewGuid();
+        // BLL Create application method also publishes the ApplicationSubmitted event
+        var newApp = await BLL.CreateApplicationAsync(userName, correlationId.Value);
         applicationId = newApp.Id;
         accountNumber = null;
-
-        // Publish ApplicationSubmitted event to start the saga
-        await events.PublishAsync(new ApplicationSubmitted(newApp.Id, appState.CorrelationId));
-        Logger.LogInformation("ApplicationSubmitted event published for application {ApplicationId}", newApp.Id);
 
         statusMessage = "Workflow started. Please wait...";
         isProcessing = true;
 
         await events.LogEventAsync(
             eventType: "ClickedStartWorkflowButton",
-            correlationId: appState.CorrelationId);
+            correlationId: this.correlationId ?? Guid.Empty);
     }
 }
