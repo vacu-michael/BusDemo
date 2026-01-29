@@ -6,7 +6,7 @@ namespace Saga;
 
 public class ApplicationWorkflowStateMachine : MassTransitStateMachine<OpenAccountState>
 {
-    // Three states for each step: Waiting, Pending, Failed
+    // Up to three states for each step: Waiting, Pending, Failed
     public State PendingValidateName { get; private set; } = null!;
     public State FailedValidateName { get; private set; } = null!;
 
@@ -22,12 +22,11 @@ public class ApplicationWorkflowStateMachine : MassTransitStateMachine<OpenAccou
     // Initial Event to start the workflow
     public Event<ApplicationSubmitted> ApplicationSubmitted { get; private set; } = null!;
 
-    // Up to 5 Events for each command: Succeeded, Faulted, Deferred, Resume, Retry
 
     // ValidateName Events
     public Event<ValidateNameSucceeded> ValidateNameSucceeded { get; private set; } = null!;
     public Event<Fault<ValidateName>> ValidateNameFaulted { get; private set; } = null!;
-    public Event<RetryValidateName> ValidateNameRetry { get; private set; } = null!;
+    public Event<ValidateNameOverrideRequested> ValidateNameOverrideRequested { get; private set; } = null!;
 
     // CreateAccount Events
     public Event<CreateAccountSucceeded> CreateAccountSucceeded { get; private set; } = null!;
@@ -35,15 +34,13 @@ public class ApplicationWorkflowStateMachine : MassTransitStateMachine<OpenAccou
     public Event<DeferCreateAccount> CreateAccountDeferred { get; private set; } = null!;
     public Event<ResumeCreateAccount> CreateAccountResume { get; private set; } = null!;
     public Schedule<OpenAccountState, ResumeCreateAccountScheduled> CreateAccountSchedule { get; private set; } = null!;
-    public Event<RetryCreateAccount> CreateAccountRetry { get; private set; } = null!;
 
     // LinkAccount Events
     public Event<LinkAccountSucceeded> LinkAccountSucceeded { get; private set; } = null!;
     public Event<Fault<LinkAccount>> LinkAccountFaulted { get; private set; } = null!;
-    public Event<RetryLinkAccount> LinkAccountRetry { get; private set; } = null!;
 
-    // // Schedules for publishing events on a delay
-    // public Schedule<OpenAccountState, ResumeCreateAccount> CreateAccountSchedule { get; private set; } = null!;
+    // Shared Retry Event
+    public Event<RetryRequested> RetryRequested { get; private set; } = null!;
 
     public ApplicationWorkflowStateMachine()
     {
@@ -57,11 +54,9 @@ public class ApplicationWorkflowStateMachine : MassTransitStateMachine<OpenAccou
         // Initial transition
         Initially(
             When(ApplicationSubmitted)
-                .Then(context =>
-                {
-                    context.Saga.WorkflowCorrelationId = context.Message.CorrelationId;
-                    context.Saga.LastUpdated = DateTime.UtcNow;
-                })
+                .Then(SetApplicationId)
+                .Then(UpdateCreatedAt)
+                .Then(UpdateLastUpdated)
                 .TransitionTo(PendingValidateName)
                 .Publish(context => new ValidateName(context.Message.CorrelationId))
         );
@@ -69,59 +64,63 @@ public class ApplicationWorkflowStateMachine : MassTransitStateMachine<OpenAccou
         // ValidateName transitions
         During(PendingValidateName,
             When(ValidateNameSucceeded)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+                .Then(UpdateLastUpdated)
                 .TransitionTo(PendingCreateAccount)
                 .Publish(context => new CreateAccount(context.Message.CorrelationId)),
 
             When(ValidateNameFaulted)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+                .Then(UpdateLastError)
                 .TransitionTo(FailedValidateName)
                 .Publish(context => new ProcessErrored(context.Message.Message.CorrelationId, context.Message.Exceptions[0].Message))
         );
 
         During(FailedValidateName,
-            When(ValidateNameRetry)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+            When(RetryRequested)
+                .Then(UpdateLastUpdated)
                 .TransitionTo(PendingValidateName)
-                .Publish(context => new ValidateName(context.Message.CorrelationId))
+                .Publish(context => new ValidateName(context.Message.CorrelationId)),
+
+            When(ValidateNameOverrideRequested)
+                .Then(UpdateLastUpdated)
+                .TransitionTo(PendingCreateAccount)
+                .Publish(context => new CreateAccount(context.Message.CorrelationId))
         );
 
         // CreateAccount transitions
         During(PendingCreateAccount,
             When(CreateAccountSucceeded)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+                .Then(UpdateLastUpdated)
                 .TransitionTo(PendingLinkAccount)
                 .Publish(context => new LinkAccount(context.Message.CorrelationId)),
 
             When(CreateAccountFaulted)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+                .Then(UpdateLastError)
                 .TransitionTo(FailedCreateAccount)
                 .Publish(context => new ProcessErrored(context.Message.Message.CorrelationId, context.Message.Exceptions[0].Message)),
 
             When(CreateAccountDeferred)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+                .Then(UpdateLastUpdated)
                 .TransitionTo(WaitingCreateAccount)
                 .Schedule(CreateAccountSchedule, context => new ResumeCreateAccountScheduled(context.Message.CorrelationId), context => context.Message.DeferUntil)
                 .Publish(context => new CommandDeferred(context.Message.CorrelationId, nameof(CreateAccount), DateTime.UtcNow.AddSeconds(10)))
         );
 
-        // When the scheduled message arrives, publish the real event
         During(WaitingCreateAccount,
             When(CreateAccountSchedule.Received)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+                .Then(UpdateLastUpdated)
                 .Publish(context => new ResumeCreateAccount(context.Message.CorrelationId))
         );
-        // When the real event is published, handle as usual
+
         During(WaitingCreateAccount,
             When(CreateAccountResume)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+                .Then(UpdateLastUpdated)
                 .TransitionTo(PendingCreateAccount)
                 .Publish(context => new CreateAccount(context.Message.CorrelationId))
         );
 
         During(FailedCreateAccount,
-            When(CreateAccountRetry)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+            When(RetryRequested)
+                .Then(UpdateLastUpdated)
                 .TransitionTo(PendingCreateAccount)
                 .Publish(context => new CreateAccount(context.Message.CorrelationId))
         );
@@ -129,21 +128,36 @@ public class ApplicationWorkflowStateMachine : MassTransitStateMachine<OpenAccou
         // LinkAccount transitions
         During(PendingLinkAccount,
             When(LinkAccountSucceeded)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+                .Then(UpdateLastUpdated)
                 .TransitionTo(Complete)
                 .Publish(context => new ProcessCompleted(context.Message.CorrelationId)),
 
             When(LinkAccountFaulted)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+                .Then(UpdateLastError)
                 .TransitionTo(FailedLinkAccount)
                 .Publish(context => new ProcessErrored(context.Message.Message.CorrelationId, context.Message.Exceptions[0].Message))
         );
 
         During(FailedLinkAccount,
-            When(LinkAccountRetry)
-                .Then(context => context.Saga.LastUpdated = DateTime.UtcNow)
+            When(RetryRequested)
+                .Then(UpdateLastUpdated)
                 .TransitionTo(PendingLinkAccount)
                 .Publish(context => new LinkAccount(context.Message.CorrelationId))
         );
+    }
+
+    static void SetApplicationId(BehaviorContext<OpenAccountState, ApplicationSubmitted> context)
+        => context.Saga.ApplicationId = context.Message.ApplicationId;
+
+    static void UpdateCreatedAt(BehaviorContext<OpenAccountState> context)
+        => context.Saga.CreatedAt = DateTime.UtcNow;
+
+    static void UpdateLastUpdated(BehaviorContext<OpenAccountState> context)
+        => context.Saga.LastUpdated = DateTime.UtcNow;
+
+    static void UpdateLastError<T>(BehaviorContext<OpenAccountState, Fault<T>> context)
+    {
+        context.Saga.LastUpdated = DateTime.UtcNow;
+        context.Saga.LastErrorMessage = context.Message.Exceptions.FirstOrDefault()?.Message ?? "Unknown error";
     }
 }

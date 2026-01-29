@@ -29,7 +29,7 @@ public class ValidateNameConsumer(WorkerBusinessLogic bll, ILogger<ValidateNameC
         // Validate the name
         if (!bll.NameIsValid(app.Name))
         {
-            _ = events.LogEventAsync("ValidateNameFailed", command.CorrelationId);
+            await events.LogEventAsync("ValidateNameFailed", command.CorrelationId);
             logger.LogWarning("Validation failed for name on application with CorrelationId {CorrelationId}.", command.CorrelationId);
 
             // Throw to trigger a Fault<ValidateName> event
@@ -37,7 +37,7 @@ public class ValidateNameConsumer(WorkerBusinessLogic bll, ILogger<ValidateNameC
         }
 
         _ = context.Publish(new ValidateNameSucceeded(command.CorrelationId));
-        _ = events.LogEventAsync("ValidateNameSucceeded", command.CorrelationId);
+        await events.LogEventAsync("ValidateNameSucceeded", command.CorrelationId);
         logger.LogInformation("Validation succeeded for name on application with CorrelationId {CorrelationId}.", command.CorrelationId);
     }
 }

@@ -1,25 +1,45 @@
 using DAL;
+using Saga;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using Models;
+using SAL;
 
 namespace BLL;
 
-public sealed class AdminBusinessLogic(DemoDbContext _db, ILogger<AdminBusinessLogic> _logger)
+public sealed class AdminBusinessLogic : IDisposable
 {
-    public async Task<bool> GetSetting(string name) =>
-        (await _db.Settings.FirstOrDefaultAsync(s => s.Name == name))?.Value ?? false;
+    private readonly SagaDbContext _sagaDb;
+    private readonly EventDbContext _eventsDb;
+    private readonly BusService _busService;
+    public event Action? WorkflowUpdated;
 
-    public async Task ToggleSetting(string settingName) =>
-        await UpdateSetting(settingName, !await GetSetting(settingName));
-
-    public async Task UpdateSetting(string name, bool value)
+    public AdminBusinessLogic(SagaDbContext sagaDb, EventDbContext eventsDb, BusService busService)
     {
-        var setting = await _db.Settings.FirstOrDefaultAsync(s => s.Name == name);
-        if (setting is null) return;
+        _sagaDb = sagaDb;
+        _eventsDb = eventsDb;
+        _busService = busService;
+        _busService.WorkflowCompleted += OnWorkflowUpdated;
+        _busService.WorkflowRescheduled += OnWorkflowUpdated;
+        _busService.WorkflowError += OnWorkflowUpdated;
+    }
+    public async Task<List<OpenAccountState>> GetAllOpenAccountStates()
+        => await _sagaDb.ApplicationWorkflowStates.AsNoTracking().ToListAsync();
 
-        _logger.LogInformation("Updating setting {Setting} to {Value}", name, value);
+    public async Task<List<ApplicationEvent>> LoadEvents(Guid correlationId) =>
+        await _eventsDb.ApplicationEvents
+            .Where(e => e.CorrelationId == correlationId)
+            .OrderBy(e => e.Timestamp)
+            .ToListAsync();
 
-        setting.Value = value;
-        await _db.SaveChangesAsync();
+    private void OnWorkflowUpdated(Guid correlationId) => WorkflowUpdated?.Invoke();
+
+    public async Task RetryWorkflow(Guid applicationId) => await _busService.RetryWorkflow(applicationId);
+    public async Task OverrideNameValidation(Guid applicationId) => await _busService.OverrideNameValidation(applicationId);
+
+    public void Dispose()
+    {
+        _busService.WorkflowCompleted -= OnWorkflowUpdated;
+        _busService.WorkflowRescheduled -= OnWorkflowUpdated;
+        _busService.WorkflowError -= OnWorkflowUpdated;
     }
 }

@@ -1,0 +1,35 @@
+@using MassTransit.Futures.Contracts
+@using Saga
+
+
+<h2>Completed Workflows</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ApplicationId</th>
+            <th>CurrentState</th>
+            <th>LastUpdated</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var workflow in CompletedWorkflows)
+        {
+            <tr>
+                <td>@workflow.ApplicationId</td>
+                <td>@workflow.CurrentState</td>
+                <td>@(workflow.LastUpdated.ToString("u") ?? "-")</td>
+                <td><button @onclick="@(_ => OnViewEventsClicked(workflow))">View Events</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public List<OpenAccountState> CompletedWorkflows { get; set; } = [];
+    [Inject] public NavigationManager NavigationManager { get; set; } = null!;
+    public void OnViewEventsClicked(OpenAccountState workflow)
+    {
+        NavigationManager.NavigateTo($"/events/{workflow.CorrelationId}");
+    }
+}

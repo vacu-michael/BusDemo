@@ -1,0 +1,57 @@
+@using MassTransit
+@using MassTransit.Futures.Contracts
+@using Saga
+
+
+<h2>Incomplete Workflows</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ApplicationId</th>
+            <th>CurrentState</th>
+            <th>ErrorMessage</th>
+            <th>LastUpdated</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var workflow in IncompleteWorkflows)
+        {
+            <tr>
+                <td>@workflow.ApplicationId</td>
+                <td>@workflow.CurrentState</td>
+                <td>@workflow.LastErrorMessage</td>
+                <td>@(workflow.LastUpdated.ToString("u") ?? "-")</td>
+                <td>
+                    @if (workflow.CurrentState is nameof(ApplicationWorkflowStateMachine.FailedValidateName))
+                    {
+                        <button @onclick=@(() => OnOverride(workflow.CorrelationId))>Override</button>
+                    }
+                    @if (workflow.CurrentState is not nameof(ApplicationWorkflowStateMachine.WaitingCreateAccount))
+                    {
+                        <button @onclick=@(() => OnRetry(workflow.CorrelationId))>Retry</button>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public List<OpenAccountState> IncompleteWorkflows { get; set; } = [];
+    [Inject] public AdminBusinessLogic bll { get; set; } = default!;
+    [Inject] public EventService events { get; set; } = default!;
+
+    private async Task OnRetry(Guid correlationId)
+    {
+        await events.LogEventAsync("AdminRetryWorkflow", correlationId);
+        await bll.RetryWorkflow(correlationId);
+    }
+
+    private async Task OnOverride(Guid correlationId)
+    {
+        await events.LogEventAsync("AdminOverrideNameValidation", correlationId);
+        await bll.OverrideNameValidation(correlationId);
+    }
+
+}

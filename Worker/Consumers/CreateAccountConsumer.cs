@@ -28,7 +28,7 @@ public class CreateAccountConsumer(WorkerBusinessLogic bll, ILogger<CreateAccoun
         {
             logger.LogInformation("Core system is not available. Rescheduling CreateAccountCommand CorrelationId {CorrelationId}.", command.CorrelationId);
 
-            _ = events.LogEventAsync("CreateAccountDeferred", command.CorrelationId);
+            await events.LogEventAsync("CreateAccountDeferred", command.CorrelationId);
             _ = context.Publish(new DeferCreateAccount(command.CorrelationId, bll.GetDeferUntilDateTime()));
             return;
         }
@@ -41,6 +41,6 @@ public class CreateAccountConsumer(WorkerBusinessLogic bll, ILogger<CreateAccoun
         await bll.SetAccountNumberForApplication(command.CorrelationId);
 
         _ = context.Publish(new CreateAccountSucceeded(command.CorrelationId));
-        _ = events.LogEventAsync("CreateAccountSucceeded", command.CorrelationId);
+        await events.LogEventAsync("CreateAccountSucceeded", command.CorrelationId);
     }
 }

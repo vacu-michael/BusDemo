@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 
 @inject EventService events
+@implements IDisposable
 
 <PageTitle>Home</PageTitle>
 
@@ -43,12 +44,12 @@
 
     protected override void OnInitialized()
     {
-        BLL.WorkflowCompleted += async (correlationId) => await OnWorkflowCompleted(correlationId);
-        BLL.WorkflowRescheduled += async (correlationId) => await OnWorkflowRescheduled(correlationId);
-        BLL.WorkflowError += async (correlationId) => await OnWorkflowError(correlationId);
+        BLL.WorkflowCompleted += OnWorkflowCompleted;
+        BLL.WorkflowRescheduled += OnWorkflowRescheduled;
+        BLL.WorkflowError += OnWorkflowError;
     }
 
-    private async Task OnWorkflowCompleted(Guid correlationId)
+    private async void OnWorkflowCompleted(Guid correlationId)
     {
         if (correlationId != this.correlationId) return;
 
@@ -63,7 +64,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task OnWorkflowRescheduled(Guid correlationId)
+    private async void OnWorkflowRescheduled(Guid correlationId)
     {
         if (correlationId != this.correlationId) return;
 
@@ -73,7 +74,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task OnWorkflowError(Guid correlationId)
+    private async void OnWorkflowError(Guid correlationId)
     {
         if (correlationId != this.correlationId) return;
 
@@ -83,19 +84,22 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private Task OnUserNameChanged() =>
-        events.LogEventAsync(
+    private Task OnUserNameChanged()
+    {
+        this.correlationId = Guid.NewGuid(); // In a real app this would be in the AppState and unique for each session
+        _ = events.LogEventAsync(
             eventType: "UserNameFieldChanged",
             correlationId: this.correlationId ?? Guid.Empty,
             data: new { UserName = userName }
             );
+        return Task.CompletedTask;
+    }
 
 
     private async Task StartWorkflowAsync()
     {
-        correlationId = Guid.NewGuid();
         // BLL Create application method also publishes the ApplicationSubmitted event
-        var newApp = await BLL.CreateApplicationAsync(userName, correlationId.Value);
+        var newApp = await BLL.CreateApplicationAsync(userName, correlationId ?? Guid.Empty);
         applicationId = newApp.Id;
         accountNumber = null;
 
@@ -105,5 +109,12 @@
         await events.LogEventAsync(
             eventType: "ClickedStartWorkflowButton",
             correlationId: this.correlationId ?? Guid.Empty);
+    }
+
+    public void Dispose()
+    {
+        BLL.WorkflowCompleted -= OnWorkflowCompleted;
+        BLL.WorkflowRescheduled -= OnWorkflowRescheduled;
+        BLL.WorkflowError -= OnWorkflowError;
     }
 }

@@ -1,0 +1,50 @@
+@page "/events/{correlationId:guid}"
+@using DAL
+
+<PageTitle>Application Events</PageTitle>
+
+<h2>Events for Workflow @CorrelationId</h2>
+@if (Events is null || !Events.Any())
+{
+    <p>No events found for this workflow.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Event Type</th>
+                <th>Event Description</th>
+                <th>Event Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var evt in Events)
+            {
+                <tr>
+                    <td>@evt.Timestamp.ToString("u")</td>
+                    <td>@evt.EventType</td>
+                    <td>@evt.Description</td>
+                    <td>@evt.Data</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+@code {
+    [Parameter] public Guid CorrelationId { get; set; }
+    [Inject] public AdminBusinessLogic bll { get; set; } = null!;
+    public List<ApplicationEvent> Events { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+    }
+
+    private async Task LoadEvents()
+    {
+        Events = await bll.LoadEvents(CorrelationId);
+        StateHasChanged();
+    }
+}

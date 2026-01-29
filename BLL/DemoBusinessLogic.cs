@@ -34,7 +34,7 @@ public sealed class DemoBusinessLogic : IDisposable
         _db.Applications.Add(app);
         await _db.SaveChangesAsync();
 
-        _ = _busService.PublishApplicationSubmittedEvent(correlationId);
+        _ = _busService.PublishApplicationSubmittedEvent(correlationId, app.Id);
         return app;
     }
 

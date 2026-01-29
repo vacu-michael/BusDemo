@@ -1,43 +1,65 @@
 @page "/admin"
+@using Saga
 @rendermode InteractiveServer
-@using BLL
-@using Models
+@implements IDisposable
+
 
 <PageTitle>Admin</PageTitle>
-<h1>Admin Page</h1>
-<ul>
-    <li>Core Available: @coreAvailable</li>
-    <li>Throw Error: @throwError</li>
-    <li>Delay: @delay</li>
-</ul>
 
-<button @onclick="() => ToggleAndReload(SettingsConstants.CoreAvailable)">Toggle Core Available</button>
-<button @onclick="() => ToggleAndReload(SettingsConstants.ThrowError)">Toggle Throw Error</button>
-<button @onclick="() => ToggleAndReload(SettingsConstants.Delay)">Toggle Delay</button>
+@if (OpenAccounts is null || !OpenAccounts.Any())
+{
+    <p>No workflow states found.</p>
+}
+else
+{
+    <IncompleteTable IncompleteWorkflows="GetIncompleteWorkflows()" />
+    <CompletedTable CompletedWorkflows="GetCompletedWorkflows()" />
+}
 
 @code {
     [Inject] public required AdminBusinessLogic AdminLogic { get; set; }
-
-    private bool coreAvailable;
-    private bool throwError;
-    private bool delay;
-
+    [Inject] public required ILogger<Admin> Logger { get; set; }
+    public List<OpenAccountState> OpenAccounts { get; set; } = new();
     protected override async Task OnInitializedAsync()
     {
-        await ReloadSettings();
+        await LoadWorkflowRuns();
+        AdminLogic.WorkflowUpdated += OnWorkflowUpdated;
     }
 
-    private async Task ReloadSettings()
+    private async Task LoadWorkflowRuns()
     {
-        coreAvailable = await AdminLogic.GetSetting(SettingsConstants.CoreAvailable);
-        throwError = await AdminLogic.GetSetting(SettingsConstants.ThrowError);
-        delay = await AdminLogic.GetSetting(SettingsConstants.Delay);
+        OpenAccounts = await AdminLogic.GetAllOpenAccountStates();
         StateHasChanged();
     }
 
-    private async Task ToggleAndReload(string setting)
+    private bool WorkflowIsComplete(OpenAccountState state) =>
+        state.CurrentState is nameof(ApplicationWorkflowStateMachine.Complete);
+
+    private void OnWorkflowUpdated()
     {
-        await AdminLogic.ToggleSetting(setting);
-        await ReloadSettings();
+        Logger.LogInformation("Admin page detected workflow update, reloading data.");
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Delay(500); // allow time for db to update
+            await LoadWorkflowRuns();
+            Logger.LogInformation("Admin page reloaded workflow data. Incomplet count: {Count}", GetIncompleteWorkflows().Count);
+        });
+    }
+
+    private List<OpenAccountState> GetIncompleteWorkflows() =>
+        OpenAccounts
+            .Where(state => !WorkflowIsComplete(state))
+            .OrderByDescending(s => s.LastUpdated)
+            .ToList();
+
+    private List<OpenAccountState> GetCompletedWorkflows() =>
+        OpenAccounts
+            .Where(WorkflowIsComplete)
+            .OrderByDescending(s => s.LastUpdated)
+            .ToList();
+
+    public void Dispose()
+    {
+        AdminLogic.WorkflowUpdated -= OnWorkflowUpdated;
     }
 }

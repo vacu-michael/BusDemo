@@ -3,9 +3,6 @@ using Models.Events;
 
 namespace SAL;
 
-/// <summary>
-/// Service for sending commands via MassTransit bus.
-/// </summary>
 public class BusService(IBus bus)
 {
     private readonly IBus _bus = bus;
@@ -13,13 +10,23 @@ public class BusService(IBus bus)
     public event Action<Guid>? WorkflowRescheduled;
     public event Action<Guid>? WorkflowError;
 
-    /// <summary>
-    /// Sends a StartWorkflow command to the bus.
-    /// </summary>
-    /// <param name="applicationId">The application ID to start workflow for.</param>
-    public Task PublishApplicationSubmittedEvent(Guid correlationId)
+    public Task PublishApplicationSubmittedEvent(Guid correlationId, int applicationId)
     {
-        var command = new ApplicationSubmitted(correlationId);
+        var command = new ApplicationSubmitted(correlationId, applicationId);
+        _bus.Publish(command);
+        return Task.CompletedTask;
+    }
+
+    public Task RetryWorkflow(Guid correlationId)
+    {
+        var command = new RetryRequested(correlationId);
+        _bus.Publish(command);
+        return Task.CompletedTask;
+    }
+
+    public Task OverrideNameValidation(Guid correlationId)
+    {
+        var command = new ValidateNameOverrideRequested(correlationId);
         _bus.Publish(command);
         return Task.CompletedTask;
     }

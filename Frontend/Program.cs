@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Frontend.Components;
 using Frontend.Consumers;
 using MassTransit;
-using Models;
 using Models.Events;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,10 +56,17 @@ builder.Services.AddMassTransit(x =>
 builder.Services.AddDbContext<DemoDbContext>(options =>
     options.UseSqlServer(builder.Configuration["Db:ConnectionString"]));
 
-// Register BusService and DemoBusinessLogic for DI
+// Register SagaDbContext for managing saga states
+builder.Services.AddDbContext<SagaDbContext>(options =>
+    options.UseSqlServer(builder.Configuration["Db:ConnectionString"]));
+
+// Register BusService and Business Logic classes for DI
 builder.Services.AddSingleton<BusService>();
+
 builder.Services.AddScoped<DemoBusinessLogic>();
+builder.Services.AddScoped<SettingsBusinessLogic>();
 builder.Services.AddScoped<AdminBusinessLogic>();
+
 
 // Register EventDbContext and Helper service for logging application events
 builder.Services.AddDbContext<EventDbContext>(options =>
