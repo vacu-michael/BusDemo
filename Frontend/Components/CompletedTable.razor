@@ -1,5 +1,7 @@
 @using MassTransit.Futures.Contracts
 @using Saga
+@using Frontend.Components.Pages
+
 
 
 <h2>Completed Workflows</h2>
@@ -7,6 +9,7 @@
     <thead>
         <tr>
             <th>ApplicationId</th>
+            <th>Name</th>
             <th>CurrentState</th>
             <th>LastUpdated</th>
             <th></th>
@@ -17,6 +20,7 @@
         {
             <tr>
                 <td>@workflow.ApplicationId</td>
+                <td>@workflow.Name</td>
                 <td>@workflow.CurrentState</td>
                 <td>@(workflow.LastUpdated.ToString("u") ?? "-")</td>
                 <td><button @onclick="@(_ => OnViewEventsClicked(workflow))">View Events</button></td>
@@ -26,9 +30,9 @@
 </table>
 
 @code {
-    [Parameter] public List<OpenAccountState> CompletedWorkflows { get; set; } = [];
+    [Parameter] public List<WorkflowWithName> CompletedWorkflows { get; set; } = [];
     [Inject] public NavigationManager NavigationManager { get; set; } = null!;
-    public void OnViewEventsClicked(OpenAccountState workflow)
+    public void OnViewEventsClicked(WorkflowWithName workflow)
     {
         NavigationManager.NavigateTo($"/events/{workflow.CorrelationId}");
     }

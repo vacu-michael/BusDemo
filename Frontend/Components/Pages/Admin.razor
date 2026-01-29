@@ -6,7 +6,8 @@
 
 <PageTitle>Admin</PageTitle>
 
-@if (OpenAccounts is null || !OpenAccounts.Any())
+
+@if (WorkflowsWithNames is null || !WorkflowsWithNames.Any())
 {
     <p>No workflow states found.</p>
 }
@@ -19,7 +20,7 @@ else
 @code {
     [Inject] public required AdminBusinessLogic AdminLogic { get; set; }
     [Inject] public required ILogger<Admin> Logger { get; set; }
-    public List<OpenAccountState> OpenAccounts { get; set; } = new();
+    public List<WorkflowWithName> WorkflowsWithNames { get; set; } = new();
     protected override async Task OnInitializedAsync()
     {
         await LoadWorkflowRuns();
@@ -28,11 +29,21 @@ else
 
     private async Task LoadWorkflowRuns()
     {
-        OpenAccounts = await AdminLogic.GetAllOpenAccountStates();
+        var results = await AdminLogic.GetAllOpenAccountStatesWithNames();
+        WorkflowsWithNames = results.Select(r => new WorkflowWithName
+        {
+            ApplicationId = r.State.ApplicationId,
+            CorrelationId = r.State.CorrelationId,
+            Name = r.ApplicationName ?? string.Empty,
+            CurrentState = r.State.CurrentState,
+            LastErrorMessage = r.State.LastErrorMessage,
+            LastUpdated = r.State.LastUpdated,
+            CreatedAt = r.State.CreatedAt
+        }).ToList();
         StateHasChanged();
     }
 
-    private bool WorkflowIsComplete(OpenAccountState state) =>
+    private bool WorkflowIsComplete(WorkflowWithName state) =>
         state.CurrentState is nameof(ApplicationWorkflowStateMachine.Complete);
 
     private void OnWorkflowUpdated()
@@ -46,14 +57,14 @@ else
         });
     }
 
-    private List<OpenAccountState> GetIncompleteWorkflows() =>
-        OpenAccounts
+    private List<WorkflowWithName> GetIncompleteWorkflows() =>
+        WorkflowsWithNames
             .Where(state => !WorkflowIsComplete(state))
             .OrderByDescending(s => s.LastUpdated)
             .ToList();
 
-    private List<OpenAccountState> GetCompletedWorkflows() =>
-        OpenAccounts
+    private List<WorkflowWithName> GetCompletedWorkflows() =>
+        WorkflowsWithNames
             .Where(WorkflowIsComplete)
             .OrderByDescending(s => s.LastUpdated)
             .ToList();
