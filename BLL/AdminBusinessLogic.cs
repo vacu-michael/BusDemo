@@ -45,6 +45,11 @@ public sealed class AdminBusinessLogic : IDisposable
             .OrderBy(e => e.Timestamp)
             .ToListAsync();
 
+    public async Task<Application?> LoadApplication(Guid correlationId) =>
+        await _demoDb.Applications
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.CorrelationId == correlationId);
+
     private void OnWorkflowUpdated(Guid correlationId) => WorkflowUpdated?.Invoke();
 
     public async Task RetryWorkflow(Guid applicationId) => await _busService.RetryWorkflow(applicationId);

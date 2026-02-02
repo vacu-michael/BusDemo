@@ -1,0 +1,47 @@
+@page "/application/{correlationId:guid}"
+@using DAL
+
+<PageTitle>Application Details</PageTitle>
+
+<h2>Application Details for Workflow @CorrelationId</h2>
+@if (Application is null)
+{
+    <p>No application found for this workflow.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Correlation Id</th>
+                <th>Name</th>
+                <th>Account Number</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>@Application.Id</td>
+                <td>@Application.CorrelationId</td>
+                <td>@Application.Name</td>
+                <td>@(Application.AccountNumber?.ToString() ?? "N/A")</td>
+            </tr>
+        </tbody>
+    </table>
+}
+@code {
+    [Parameter] public Guid CorrelationId { get; set; }
+    [Inject] public AdminBusinessLogic bll { get; set; } = null!;
+    public Application? Application { get; set; } = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadApplication();
+    }
+
+    private async Task LoadApplication()
+    {
+        Application = await bll.LoadApplication(CorrelationId);
+        StateHasChanged();
+    }
+}

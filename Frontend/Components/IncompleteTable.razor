@@ -3,7 +3,6 @@
 @using Frontend.Components.Pages
 
 
-
 <h2>Incomplete Workflows</h2>
 <table class="table">
     <thead>
@@ -14,6 +13,7 @@
             <th>ErrorMessage</th>
             <th>LastUpdated</th>
             <th>Action</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -35,6 +35,8 @@
                         <button @onclick=@(() => OnRetry(workflow.CorrelationId))>Retry</button>
                     }
                 </td>
+                <td><button @onclick=@(() => OnViewApplicationClicked(workflow.CorrelationId))>View Application</button>
+                </td>
             </tr>
         }
     </tbody>
@@ -44,6 +46,7 @@
     [Parameter] public List<WorkflowWithName> IncompleteWorkflows { get; set; } = [];
     [Inject] public AdminBusinessLogic bll { get; set; } = default!;
     [Inject] public EventService events { get; set; } = default!;
+    [Inject] public NavigationManager NavigationManager { get; set; } = null!;
 
     private async Task OnRetry(Guid correlationId)
     {
@@ -57,4 +60,8 @@
         await bll.OverrideNameValidation(correlationId);
     }
 
+    public void OnViewApplicationClicked(Guid correlationId)
+    {
+        NavigationManager.NavigateTo($"/application/{correlationId}");
+    }
 }

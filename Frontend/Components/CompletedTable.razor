@@ -13,6 +13,7 @@
             <th>CurrentState</th>
             <th>LastUpdated</th>
             <th></th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -24,6 +25,7 @@
                 <td>@workflow.CurrentState</td>
                 <td>@(workflow.LastUpdated.ToString("u") ?? "-")</td>
                 <td><button @onclick="@(_ => OnViewEventsClicked(workflow))">View Events</button></td>
+                <td><button @onclick="@(_ => OnViewApplicationClicked(workflow))">View Application</button></td>
             </tr>
         }
     </tbody>
@@ -35,5 +37,9 @@
     public void OnViewEventsClicked(WorkflowWithName workflow)
     {
         NavigationManager.NavigateTo($"/events/{workflow.CorrelationId}");
+    }
+    public void OnViewApplicationClicked(WorkflowWithName workflow)
+    {
+        NavigationManager.NavigateTo($"/application/{workflow.CorrelationId}");
     }
 }
